@@ -8,7 +8,7 @@ import secrets
 # Configuração do banco de dados via ORM
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 DATABASE_URL = "sqlite:///tarefas.db"
 
@@ -49,7 +49,12 @@ SENHA = "admin"
 
 security = HTTPBasic()
 
-lista_tarefas: list[Tarefa] = []
+def sessao_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def validar_usuario(credentials: HTTPBasicCredentials = Depends(security)):
     is_username_correct = secrets.compare_digest(credentials.username, USUARIO)
@@ -63,10 +68,22 @@ def validar_usuario(credentials: HTTPBasicCredentials = Depends(security)):
         )
 
 @app.post("/adicionar_tarefa")
-def adicionar_tarefa(tarefa: Tarefa, credentials: HTTPBasicCredentials = Depends(validar_usuario)):
-    if tarefa.nome in [t.nome for t in lista_tarefas]:
+def adicionar_tarefa(tarefa: Tarefa, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
+    db_tarefa = (db.query(TarefaDB).filter(TarefaDB.nome == tarefa.nome).first())
+
+    if db_tarefa:
         raise HTTPException(status_code=400, detail="Tarefa já cadastrada.")
-    lista_tarefas.append(tarefa)
+
+    nova_tarefa = TarefaDB(
+        nome=tarefa.nome,
+        descricao=tarefa.descricao,
+        concluida=tarefa.concluida
+    )
+
+    db.add(nova_tarefa)
+    db.commit()
+    db.refresh(nova_tarefa)
+
     return { "message": "Tarefa adicionada com sucesso.", "tarefa": tarefa}
 
 @app.get("/tarefas")
