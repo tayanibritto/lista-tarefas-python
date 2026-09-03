@@ -4,6 +4,39 @@ from fastapi import Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import secrets
 
+
+# Configuração do banco de dados via ORM
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+DATABASE_URL = "sqlite:///tarefas.db"
+
+engine = create_engine(DATABASE_URL, connect_args={ "check_same_thread": False })
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+# Modelo da tabela
+
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import Boolean
+
+class TarefaDB(Base):
+    __tablename__ = "tarefas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, unique=True, nullable=False)
+    descricao = Column(String, nullable=False)
+    concluida = Column(Boolean, default=False)
+
+# Criação da tabela
+
+Base.metadata.create_all(bind=engine)
+
 class Tarefa(BaseModel):
     nome: str
     descricao: str
