@@ -84,7 +84,7 @@ def adicionar_tarefa(tarefa: Tarefa, db: Session = Depends(sessao_db), credentia
     db.commit()
     db.refresh(nova_tarefa)
 
-    return { "message": "Tarefa adicionada com sucesso.", "tarefa": tarefa}
+    return { "message": "Tarefa adicionada com sucesso." }
 
 @app.get("/tarefas")
 def listar_tarefas(page: int = 1, size: int = 10, sort_by: str = "nome", db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
@@ -111,12 +111,17 @@ def listar_tarefas(page: int = 1, size: int = 10, sort_by: str = "nome", db: Ses
     }
 
 @app.put("/marcar_concluida/{nome}")
-def marcar_concluida(nome: str, credentials: HTTPBasicCredentials = Depends(validar_usuario)):
-    for tarefa in lista_tarefas:
-        if tarefa.nome == nome:
-            tarefa.concluida = True
-            return { "message": "Tarefa marcada como concluída." }
-    raise HTTPException(status_code=404, detail="Tarefa não cadastrada.")
+def marcar_concluida(nome: str, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
+    db_tarefa = (db.query(TarefaDB).filter(TarefaDB.nome == nome).first())
+
+    if not db_tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não cadastrada.")
+
+    db_tarefa.concluida = True
+    db.commit()
+    db.refresh(db_tarefa)
+
+    return { message: "Tarefa '{nome}' marcada como concluída." }
 
 @app.delete("/remover_tarefa/{nome}")
 def remover_tarefa(nome: str, credentials: HTTPBasicCredentials = Depends(validar_usuario)):
