@@ -10,7 +10,7 @@ import secrets
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-DATABASE_URL = "sqlite:///tarefas.db"
+DATABASE_URL = "sqlite:///./tarefas.db"
 
 engine = create_engine(DATABASE_URL, connect_args={ "check_same_thread": False })
 
@@ -113,10 +113,10 @@ def listar_tarefas(page: int = 1, size: int = 10, sort_by: str = "nome", db: Ses
 
     total = query.count()
 
-    tarefas = (query.offset((page - 1) * size).limit(size).all())
-
-    if not tarefas:
+    if total == 0:
         raise HTTPException(status_code=404, detail="Nenhuma tarefa cadastrada.")
+    
+    tarefas = (query.offset((page - 1) * size).limit(size).all())
 
     return {
         "page": page,
