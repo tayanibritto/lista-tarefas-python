@@ -87,23 +87,27 @@ def adicionar_tarefa(tarefa: Tarefa, db: Session = Depends(sessao_db), credentia
     return { "message": "Tarefa adicionada com sucesso.", "tarefa": tarefa}
 
 @app.get("/tarefas")
-def listar_tarefas(page: int = 1, size: int = 10, sort_by: str = "nome", credentials: HTTPBasicCredentials = Depends(validar_usuario)):
+def listar_tarefas(page: int = 1, size: int = 10, sort_by: str = "nome", db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
     if page < 1 or size < 1:
         raise HTTPException(status_code=400, detail="page ou size inválido.")
-    if not lista_tarefas:
+
+    if sort_by == "nome":
+        query = db.query(TarefaDB).order_by(TarefaDB.nome)
+    elif sort_by == "descricao":
+        query = db.query(TarefaDB).order_by(TarefaDB.descricao)
+
+    if not tarefas:
         raise HTTPException(status_code=404, detail="Nenhuma tarefa cadastrada.")
-    start = (page - 1) * size
-    end = start + size
-    campos_validos = ["nome", "descricao"]
-    if sort_by not in campos_validos:
-        raise HTTPException(status_code=400, detail=f"Campo inválido. Use {','.join(campos_validos)}")
-    tarefas_ordenadas = sorted(lista_tarefas, key=lambda tarefa: getattr(tarefa, sort_by))
-    tarefas_paginadas = tarefas_ordenadas[start:end]
+
+    total = query.count()
+
+    tarefas = (query.offset((page - 1) * size).limit(size).all())
+
     return {
         "page": page,
         "size": size,
-        "total": len(lista_tarefas),
-        "tarefas": tarefas_paginadas
+        "total": total,
+        "tarefas": tarefas
     }
 
 @app.put("/marcar_concluida/{nome}")
