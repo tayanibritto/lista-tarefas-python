@@ -1,0 +1,26 @@
+services:
+  api:
+
+    # Instruindo o Compose a usar o Dockerfile do projeto
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: lista-tarefas-api
+
+    # Permite acesso ao host na porta 8000
+    ports:
+      - "8000:8000"
+
+    # Sincroniza a pasta ao container
+    volumes:
+      - .:/app
+
+    # Comandos que executarão quando o container for iniciado
+    command: ["poetry", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+    # Carrega as variáveis de ambientes descritas no .env
+    env_file:
+      - .env
+
+    restart: unless-stopped

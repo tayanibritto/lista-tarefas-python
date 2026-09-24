@@ -3,14 +3,14 @@ from pydantic import BaseModel
 from fastapi import Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import secrets
-
+import os #bib para acessar variáveis de ambiente
 
 # Configuração do banco de dados via ORM
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-DATABASE_URL = "sqlite:///./tarefas.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL, connect_args={ "check_same_thread": False })
 
@@ -42,10 +42,33 @@ class Tarefa(BaseModel):
     descricao: str
     concluida: bool = False
 
-app = FastAPI()
+app = FastAPI(
+    title="Lista de Tarefas",
+    description="""
+        API REST desenvolvida com FastAPI para gerenciamento de tarefas.
 
-USUARIO = "admin"
-SENHA = "admin"
+        Funcionalidades
+
+        - Adicionar, listar e remover tarefas;
+        - Marcar tarefa como concluída;
+        - Autenticação HTTP Basic;
+        - Persistência em SQLite;
+        - Containerização com Docker e Docker Compose;
+        - Gerenciamento de dependências com Poetry
+
+        Aplicação desenvolvida com FastAPI, SQLAlchemy e Poetry.
+    """,
+    version="1.0.0",
+    contact={
+        "name": "Tayani Mayara Britto",
+        "email": "mad.britto@gmail.com"
+    }
+)
+
+# Configuração das credenciais
+
+USUARIO = os.getenv("USUARIO")
+SENHA = os.getenv("SENHA")
 
 security = HTTPBasic()
 
@@ -67,7 +90,7 @@ def validar_usuario(credentials: HTTPBasicCredentials = Depends(security)):
             headers={"WWW-Authenticate": "Basic"},
         )
 
-@app.post("/adicionar_tarefa")
+@app.post("/adicionar_tarefa", tags=["Tarefas"], summary="Adicionar nova tarefa")
 def adicionar_tarefa(tarefa: Tarefa, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
     db_tarefa = (db.query(TarefaDB).filter(TarefaDB.nome == tarefa.nome).first())
 
@@ -94,7 +117,7 @@ def adicionar_tarefa(tarefa: Tarefa, db: Session = Depends(sessao_db), credentia
         }
     }
 
-@app.get("/tarefas")
+@app.get("/tarefas", tags=["Tarefas"], summary="Listar tarefas")
 def listar_tarefas(page: int = 1, size: int = 10, sort_by: str = "nome", db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
     if page < 1 or size < 1:
         raise HTTPException(status_code=400, detail="page ou size inválido.")
@@ -133,7 +156,7 @@ def listar_tarefas(page: int = 1, size: int = 10, sort_by: str = "nome", db: Ses
         ]
     }
 
-@app.put("/marcar_concluida/{nome}")
+@app.put("/marcar_concluida/{nome}", tags=["Tarefas"], summary="Marcar tarefa como concluída")
 def marcar_concluida(nome: str, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
     db_tarefa = (db.query(TarefaDB).filter(TarefaDB.nome == nome).first())
 
@@ -146,7 +169,7 @@ def marcar_concluida(nome: str, db: Session = Depends(sessao_db), credentials: H
 
     return { "message": f"Tarefa '{nome}' marcada como concluída." }
 
-@app.delete("/remover_tarefa/{nome}")
+@app.delete("/remover_tarefa/{nome}", tags=["Tarefas"], summary="Remover tarefa")
 def remover_tarefa(nome: str, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
     db_tarefa = (db.query(TarefaDB).filter(TarefaDB.nome == nome).first())
 
