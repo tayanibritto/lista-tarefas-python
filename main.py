@@ -10,7 +10,7 @@ import os #bib para acessar variáveis de ambiente
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tarefas.db")
 
 engine = create_engine(DATABASE_URL, connect_args={ "check_same_thread": False })
 
@@ -89,6 +89,12 @@ def validar_usuario(credentials: HTTPBasicCredentials = Depends(security)):
             detail="Usuário e/ou senha incorretos",
             headers={"WWW-Authenticate": "Basic"},
         )
+
+@app.post("/login", tags=["Autenticação"],summary="Realizar autenticação")
+def login(credentials: HTTPBasicCredentials = Depends(validar_usuario)):
+    return {
+        "message": "Autenticação realizada com sucesso"
+    }
 
 @app.post("/adicionar_tarefa", tags=["Tarefas"], summary="Adicionar nova tarefa")
 def adicionar_tarefa(tarefa: Tarefa, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends(validar_usuario)):
